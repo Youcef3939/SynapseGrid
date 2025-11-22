@@ -76,6 +76,16 @@ output/
 └── checkpoints/   # model checkpoints
 ```
 
+## dataflow
+![alt text](pics/image.png)
+
+## interface architecture
+![alt text](pics/image1.png)
+![alt text](pics/image3.png)
+
+## pipeline architecture
+![alt text](pics/image2.png)
+
 ## running tests
 
 to run the internal test suite:
