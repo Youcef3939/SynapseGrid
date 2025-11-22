@@ -1,0 +1,99 @@
+import optuna
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
+import torchvision.transforms as transforms
+import torchvision.datasets as datasets
+from model import get_model
+import os
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+EPOCHS = 5 
+
+def objective(trial):
+    lr = trial.suggest_float("lr", {{ hpo_space.lr[0] }}, {{ hpo_space.lr[1] }}, log=True)
+    {% if 'batch_size' in hpo_space %}
+    batch_size = trial.suggest_categorical("batch_size", {{ hpo_space.batch_size }})
+    {% else %}
+    batch_size = 32
+    {% endif %}
+    {% if 'dropout' in hpo_space %}
+    dropout = trial.suggest_float("dropout", {{ hpo_space.dropout[0] }}, {{ hpo_space.dropout[1] }})
+    {% else %}
+    dropout = 0.0
+    {% endif %}
+
+    {% if data_type == 'image' %}
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    dataset = datasets.ImageFolder(root="{{ data_path }}", transform=transform)
+    # Use a smaller subset for HPO speed
+    subset_indices = torch.randperm(len(dataset))[:int(0.1 * len(dataset))]
+    dataset = torch.utils.data.Subset(dataset, subset_indices)
+    
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+    
+    {% elif data_type == 'tabular' %}
+    x = torch.randn(100, {{ input_dim }})
+    y = torch.randint(0, {{ num_classes }}, (100,))
+    dataset = TensorDataset(x, y)
+    train_dataset = dataset
+    val_dataset = dataset
+    {% endif %}
+    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    
+    model = get_model().to(DEVICE) 
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    
+    for epoch in range(EPOCHS):
+        model.train()
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            
+        model.eval()
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for inputs, labels in val_loader:
+                {% if data_type == 'tabular' %}
+                inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+                {% else %}
+                inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+                {% endif %}
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+        
+        accuracy = correct / total
+        trial.report(accuracy, epoch)
+
+        if trial.should_prune():
+            raise optuna.exceptions.TrialPruned()
+
+    return accuracy
+
+if __name__ == "__main__":
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials={{ n_trials }})
+    
+    print("Best trial:")
+    trial = study.best_trial
+    print(f"  Value: {trial.value}")
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print(f"    {key}: {value}")

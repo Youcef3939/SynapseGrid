@@ -1,0 +1,77 @@
+import torch
+import torch.nn as nn
+import numpy as np
+import os
+import shap
+from model import get_model
+{% if data_type == 'image' %}
+import torchvision.transforms as transforms
+import torchvision.datasets as datasets
+{% endif %}
+
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+BATCH_SIZE = {{ batch_size }}
+DATA_PATH = "{{ data_path }}"
+NUM_CLASSES = {{ num_classes }}
+
+def load_data():
+    print("Loading data for explanation...")
+    {% if data_type == 'image' %}
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    try:
+        dataset = datasets.ImageFolder(root=DATA_PATH, transform=transform)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
+        inputs, _ = next(iter(loader))
+        return inputs.to(DEVICE)
+    except Exception as e:
+        print(f"Error loading image data: {e}")
+        print("Using random noise for demonstration.")
+        return torch.randn(10, 3, 224, 224).to(DEVICE)
+
+    {% elif data_type == 'tabular' %}
+    print("Generating synthetic tabular data for explanation...")
+    return torch.randn(100, {{ input_dim }}).to(DEVICE)
+    {% endif %}
+
+def explain():
+    print("Initializing model...")
+    model = get_model(num_classes=NUM_CLASSES).to(DEVICE)
+    
+    checkpoint_path = "checkpoints/model.pth"
+    if os.path.exists(checkpoint_path):
+        model.load_state_dict(torch.load(checkpoint_path, map_location=DEVICE))
+        print("Loaded trained model weights.")
+    else:
+        print("Warning: No checkpoint found. Explaining initialized model (random weights).")
+    
+    model.eval()
+    
+    inputs = load_data()
+    
+    print("Running SHAP analysis...")
+    
+    {% if model_type == 'cnn' %}
+    explainer = shap.GradientExplainer(model, inputs)
+    shap_values = explainer.shap_values(inputs)
+    
+    print("SHAP values calculated.")
+    print(f"Shape of SHAP values: {np.array(shap_values).shape}")
+    
+    {% else %}
+    explainer = shap.DeepExplainer(model, inputs)
+    shap_values = explainer.shap_values(inputs)
+    
+    print("SHAP values calculated.")
+    print(f"Shape of SHAP values: {np.array(shap_values).shape}")
+    
+    {% endif %}
+    
+    print("Explanation complete. Results ready for visualization.")
+
+if __name__ == "__main__":
+    explain()

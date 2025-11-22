@@ -1,0 +1,44 @@
+import torch
+import torch.nn as nn
+import torchvision.models as models
+
+def get_model(num_classes={{ num_classes }}, pretrained=True):
+    print(f"Initializing {{ model_name }} with {num_classes} classes...")
+    
+    {% if model_type == 'cnn' %}
+    model = models.{{ model_name }}(pretrained=pretrained)
+    
+    {% if 'resnet' in model_name %}
+    num_ftrs = model.fc.in_features
+    model.fc = nn.Linear(num_ftrs, num_classes)
+    {% elif 'mobilenet' in model_name %}
+    num_ftrs = model.classifier[3].in_features
+    model.classifier[3] = nn.Linear(num_ftrs, num_classes)
+    {% endif %}
+    
+    {% elif model_type == 'transformer' %}
+    model = models.{{ model_name }}(pretrained=pretrained)
+    num_ftrs = model.heads.head.in_features
+    model.heads.head = nn.Linear(num_ftrs, num_classes)
+    
+    {% elif model_type == 'mlp' %}
+    layers = []
+    input_dim = {{ input_dim }}
+    hidden_dims = {{ hidden_dims }}
+    
+    for h_dim in hidden_dims:
+        layers.append(nn.Linear(input_dim, h_dim))
+        layers.append(nn.ReLU())
+        layers.append(nn.Dropout({{ dropout }}))
+        input_dim = h_dim
+        
+    layers.append(nn.Linear(input_dim, num_classes))
+    model = nn.Sequential(*layers)
+    
+    {% endif %}
+    
+    return model
+
+if __name__ == "__main__":
+    model = get_model()
+    print(model)
