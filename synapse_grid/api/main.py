@@ -78,7 +78,7 @@ async def generate_code(request: GenerateRequest):
             if os.path.exists(path):
                 with open(path, "r") as f:
                     files[filename] = f.read()
-                    
+                     
         return CodeResponse(files=files)
 
 @app.get("/health")
