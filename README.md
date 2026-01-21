@@ -26,7 +26,7 @@
 
 1.  clone the repository:
     ```bash
-    git clone https://github.com/Youcef3939/SynapseGrid.git
+    git clone https://github.com/Youcef3939/SynapseGrid.git 
     cd SynapseGrid
     ```
 
