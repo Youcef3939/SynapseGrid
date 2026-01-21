@@ -8,8 +8,8 @@ from synapse_grid.core.architect import Architect
 from synapse_grid.generator.writer import Writer
 from synapse_grid.core.config import config
 import os
-import tempfile
-
+import tempfile 
+ 
 st.set_page_config(page_title="SynapseGrid mission control", layout="wide")
 
 st.title("🧠 SynapseGrid mission control")
