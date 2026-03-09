@@ -7,6 +7,7 @@ app = typer.Typer(
     name="synapse-grid",
     help="Autonomous Neural Architect System",
     add_completion=False,
+    
 )
 console = Console()
 
