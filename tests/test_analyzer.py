@@ -7,6 +7,7 @@ def test_analyzer_classification():
     assert spec.task_type == "classification"
     assert spec.data_type == "image"
     assert spec.num_classes == 10
+    
 
 def test_analyzer_regression():
     analyzer = Analyzer()
