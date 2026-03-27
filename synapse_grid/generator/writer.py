@@ -3,15 +3,15 @@ from jinja2 import Environment, FileSystemLoader
 from typing import Dict, Any
 
 class Writer:
-    def __init__(self, template_dir: str = "synapse_grid/templates"):
-        if not os.path.isabs(template_dir):
+    def __init__(self, template_dir: str = "synapse_grid/templates"): 
+        if not os.path.isabs(template_dir): 
              base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-             template_dir = os.path.join(base_dir, "templates")
+             template_dir = os.path.join(base_dir, "templates") 
         
-        self.env = Environment(loader=FileSystemLoader(template_dir))
-
+        self.env = Environment(loader=FileSystemLoader(template_dir)) 
+ 
     def generate(self, template_name: str, context: Dict[str, Any], output_path: str):
-        template = self.env.get_template(template_name)
+        template = self.env.get_template(template_name) 
         content = template.render(**context)
         
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
