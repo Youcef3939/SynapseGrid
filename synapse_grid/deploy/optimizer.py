@@ -3,11 +3,11 @@ import os
 
 class Optimizer:
     def export_onnx(self, model, input_shape, output_path):
-        print(f"Exporting model to {output_path}...")
+        print(f"Exporting model to {output_path}...") 
         dummy_input = torch.randn(1, *input_shape)
-        torch.onnx.export(
+        torch.onnx.export( 
             model, 
-            dummy_input, 
+            dummy_input,  
             output_path, 
             verbose=False,
             input_names=['input'], 
